@@ -410,32 +410,6 @@
 </section>
 </div>
 <script>
-  function checkAndResetTotals() {
-    const now = Date.now();
-    const resetKey = 'totalsLastReset';
-    const lastReset = localStorage.getItem(resetKey);
-
-    if (!lastReset) {
-      localStorage.setItem(resetKey, now);
-    } else {
-      const diff = now - Number(lastReset);
-      const hours24 = 24 * 60 * 60 * 1000;
-      if (diff > hours24) {
-        resetCashierTotals();
-        localStorage.setItem(resetKey, now);
-      }
-    }
-  }
-
-  function resetCashierTotals() {
-    for (let i = 1; i <= 9; i++) {
-      if (i === 7) continue;
-      localStorage.removeItem(`cashier${i}Total`);
-      localStorage.removeItem(`cashier${i}Entries`);
-    }
-    updateDashboardUI?.();
-  }
-
 
 (() => {
   const admins = {
@@ -709,13 +683,11 @@
       const id = parseInt(e.target.getAttribute('data-id'));
       showDetails(id);
     }
-  });
-
+    });
   
-checkAndResetTotals();
-// Login handling
+  // Login handling
   
-loginBtn.addEventListener('click', () => {
+  loginBtn.addEventListener('click', () => {
   const username = loginUsernameInput.value.trim();
   const password = loginPasswordInput.value.trim();
 
@@ -951,12 +923,38 @@ loginUsernameInput.addEventListener('keydown', e => {
     downloadPDF(entries, filename);
   });
 
-  // Load saved data
+    // Load saved data
   let data = loadData();
 
+  // Daily totals auto-reset
+  function resetCashierTotals() {
+    cashierIds.forEach(id => {
+      data[id] = [];
+    });
+    saveData();
+    renderCashierGrid();
+    if (currentCashierId !== null) {
+      renderEntriesList();
+    }
+  }
+
+  function checkAndResetTotals() {
+    const today = new Date().toLocaleDateString();
+    const resetKey = 'totalsLastResetDate';
+    const lastResetDate = localStorage.getItem(resetKey);
+    if (lastResetDate !== today) {
+      resetCashierTotals();
+      localStorage.setItem(resetKey, today);
+    }
+  }
+
+  // Run once on load and then every minute
+  checkAndResetTotals();
+  setInterval(checkAndResetTotals, 60 * 1000);
+  
   // Initialize theme on load
   loadTheme();
-
+  
   // Keyboard shortcuts for accessibility (optional)
   document.body.addEventListener('keydown', e => {
     if(e.key === 'Escape' && detailsScreen.style.display === 'block') {
